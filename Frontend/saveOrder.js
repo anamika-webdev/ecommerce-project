@@ -1,4 +1,4 @@
-function saveOrder(cartItems) {
+async function saveOrder(cartItems) {
     let fullName = document.querySelector('input[placeholder="Enter your full name"]').value.trim();
     let phone = document.querySelector('input[placeholder="Enter your phone number"]').value.trim();
     let address = document.querySelector('input[placeholder="Enter your address"]').value.trim();
@@ -10,27 +10,30 @@ function saveOrder(cartItems) {
         return;
     }
 
-    // Calculate total price
-    let totalPrice = cartItems.reduce((sum, product) => sum + (product.price * product.quantity), 0);
-
-    // Create new order object
-    let newOrder = {
+    let orderData = {
         name: fullName,
         phone: phone,
         address: `${address}, ${city}, ${country}`,
         items: cartItems,
-        total: totalPrice.toFixed(2),
-        timestamp: new Date().toLocaleString()
+        total: cartItems.reduce((sum, product) => sum + (product.price * product.quantity), 0),
     };
 
-    // Save order to localStorage
-    let orders = JSON.parse(localStorage.getItem("orders")) || [];
-    orders.push(newOrder);
-    localStorage.setItem("orders", JSON.stringify(orders));
+    try {
+        let response = await fetch("http://localhost:5000/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(orderData),
+        });
 
-    alert(`✅ Order placed successfully!\n\nThank you, ${fullName}! Your order will be shipped to ${address}, ${city}, ${country}.`);
-    
-    // Clear cart after checkout
-    localStorage.removeItem("cart");
-    document.querySelector('.returnCart .list').innerHTML = "<p>No items in the cart.</p>";
+        if (response.ok) {
+            alert("✅ Order placed successfully!");
+            localStorage.removeItem("listCart");
+            document.querySelector('.returnCart .list').innerHTML = "<p>No items in the cart.</p>";
+        } else {
+            alert("❌ Failed to place order. Please try again.");
+        }
+    } catch (error) {
+        console.error("Error placing order:", error);
+        alert("⚠️ Server error. Please try again later.");
+    }
 }
